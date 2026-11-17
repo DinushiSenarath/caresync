@@ -1,0 +1,5 @@
+package backend.user;
+
+public enum Role {
+    ADMIN, RECEPTIONIST, DOCTOR, NURSE, PHARMACIST, CASHIER, PATIENT, LAB_TECH, WARD_STAFF
+}
