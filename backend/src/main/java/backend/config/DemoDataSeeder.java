@@ -10,8 +10,10 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+import org.springframework.core.annotation.Order;
 
 @Slf4j
+@Order(1)
 @Component
 @RequiredArgsConstructor
 @ConditionalOnProperty(name = "app.seed-demo-data", havingValue = "true")
