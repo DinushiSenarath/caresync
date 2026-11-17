@@ -1,8 +1,10 @@
 package backend.common;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -29,6 +31,17 @@ public class ApiExceptionHandler {
         ex.getBindingResult().getFieldErrors()
                 .forEach(f -> errors.putIfAbsent(f.getField(), f.getDefaultMessage()));
         return build(HttpStatus.BAD_REQUEST, "Validation failed", errors);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleUnreadable(HttpMessageNotReadableException ex) {
+        return build(HttpStatus.BAD_REQUEST, "Request body is missing or has an invalid value", null);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleIntegrity(DataIntegrityViolationException ex) {
+        log.warn("Data integrity violation", ex);
+        return build(HttpStatus.CONFLICT, "This change conflicts with existing data", null);
     }
 
     @ExceptionHandler(AccessDeniedException.class)
