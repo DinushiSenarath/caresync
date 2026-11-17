@@ -49,4 +49,6 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     List<LocalTime> bookedTimes(@Param("doctorId") Long doctorId,
                                 @Param("date") LocalDate date,
                                 @Param("cancelled") AppointmentStatus cancelled);
+
+    List<Appointment> findByPatientIdOrderByAppointmentDateDescStartTimeDesc(Long patientId, Pageable pageable);
 }
