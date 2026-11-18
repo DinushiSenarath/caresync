@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import java.math.BigDecimal;
 
 import java.time.Instant;
 
@@ -28,6 +29,7 @@ public class Medicine {
     private String category;
     private int reorderLevel;
     private boolean active = true;
+    private BigDecimal unitPrice = BigDecimal.ZERO;
 
     @CreationTimestamp
     @Column(updatable = false)

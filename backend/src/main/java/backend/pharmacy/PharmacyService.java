@@ -173,6 +173,7 @@ public class PharmacyService {
         m.setUnit(r.unit().trim());
         m.setCategory(clean(r.category()));
         m.setReorderLevel(r.reorderLevel());
+        if (r.unitPrice() != null) m.setUnitPrice(r.unitPrice());
     }
 
     private Map<Long, Long> stockFor(Collection<Long> ids) {
@@ -186,8 +187,8 @@ public class PharmacyService {
 
     private MedicineResponse toResponse(Medicine m, long stock) {
         boolean low = m.getReorderLevel() > 0 && stock <= m.getReorderLevel();
-        return new MedicineResponse(m.getId(), m.getName(), m.getStrength(), m.getForm(), m.getUnit(),
-                m.getCategory(), m.getReorderLevel(), m.isActive(), stock, low);
+                return new MedicineResponse(m.getId(), m.getName(), m.getStrength(), m.getForm(), m.getUnit(),
+                m.getCategory(), m.getReorderLevel(), m.isActive(), stock, low, m.getUnitPrice());
     }
 
     private Medicine findMedicine(Long id) {

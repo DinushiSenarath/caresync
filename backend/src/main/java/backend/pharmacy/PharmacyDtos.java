@@ -5,6 +5,7 @@ import jakarta.validation.constraints.*;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.math.BigDecimal;
 
 public final class PharmacyDtos {
     private PharmacyDtos() {}
@@ -16,11 +17,12 @@ public final class PharmacyDtos {
             @NotBlank @Size(max = 20) String unit,
             @Size(max = 60) String category,
             @NotNull @Min(0) @Max(100000) Integer reorderLevel,
-            Boolean active) {}
+            Boolean active,
+            @DecimalMin("0.00") @Digits(integer = 10, fraction = 2) BigDecimal unitPrice) {}
 
     public record MedicineResponse(Long id, String name, String strength, MedicineForm form, String unit,
                                    String category, int reorderLevel, boolean active,
-                                   long availableStock, boolean lowStock) {}
+                                   long availableStock, boolean lowStock, BigDecimal unitPrice) {}
 
     public record BatchRequest(
             @NotBlank @Size(max = 50) String batchNo,

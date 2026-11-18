@@ -16,3 +16,4 @@ frontend/dist/
 *.iml
 .DS_Store
 *.local.ps1
+*.log
