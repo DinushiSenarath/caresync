@@ -6,8 +6,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 public interface PatientRepository extends JpaRepository<Patient, Long> {
 
@@ -35,4 +37,7 @@ public interface PatientRepository extends JpaRepository<Patient, Long> {
     List<Patient> findPossibleDuplicates(@Param("nic") String nic,
                                          @Param("name") String name,
                                          @Param("dob") LocalDate dob);
+
+    Optional<Patient> findByPatientNoIgnoreCase(String patientNo);
+    Optional<Patient> findByUserId(Long userId);
 }

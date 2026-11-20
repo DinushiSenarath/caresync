@@ -51,4 +51,6 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
                                 @Param("cancelled") AppointmentStatus cancelled);
 
     List<Appointment> findByPatientIdOrderByAppointmentDateDescStartTimeDesc(Long patientId, Pageable pageable);
+
+    long countByPatientIdAndStatus(Long patientId, AppointmentStatus status);
 }

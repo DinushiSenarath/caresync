@@ -25,4 +25,7 @@ public interface PrescriptionRepository extends JpaRepository<Prescription, Long
             order by p.issuedAt asc, p.id asc
             """)
     Page<Prescription> queue(@Param("statuses") List<PrescriptionStatus> statuses, Pageable pageable);
+
+    @Query("select p from Prescription p where p.appointment.patient.id = :patientId and p.status <> :excluded order by p.id desc")
+    List<Prescription> findForPatient(@Param("patientId") Long patientId, @Param("excluded") PrescriptionStatus excluded);
 }

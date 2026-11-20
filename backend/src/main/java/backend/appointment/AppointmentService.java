@@ -181,6 +181,52 @@ public class AppointmentService {
         return AppointmentResponse.from(a);
     }
 
+        @Transactional
+    public AppointmentResponse requestAsPatient(Patient patient, Long doctorId, LocalDate date, LocalTime time,
+                                                String reason, Long actorId) {
+        if (!patient.isActive()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "This patient record is deactivated");
+        }
+        if (repo.countByPatientIdAndStatus(patient.getId(), AppointmentStatus.REQUESTED) >= 3) {
+            throw new ApiException(HttpStatus.CONFLICT,
+                    "You already have 3 requests waiting. Please wait for the hospital to respond.");
+        }
+        Doctor d = findDoctor(doctorId);
+        checkSlot(d, date, time, 0L);
+
+        Appointment a = new Appointment();
+        a.setPatient(patient);
+        a.setDoctor(d);
+        a.setAppointmentDate(date);
+        a.setStartTime(time);
+        a.setStatus(AppointmentStatus.REQUESTED);
+        a.setReason(reason == null || reason.isBlank() ? null : reason.trim());
+        a.setCreatedBy(actorId);
+        saveChecked(a);
+        audit.log(actorId, "APPOINTMENT_REQUESTED", "APPOINTMENT", a.getId(),
+                "doctorId=" + d.getId() + ", " + date + " " + time);
+        return AppointmentResponse.from(a);
+    }
+
+    @Transactional
+    public AppointmentResponse cancelAsPatient(Long appointmentId, Long patientId, String reason, Long actorId) {
+        Appointment a = find(appointmentId);
+        if (!a.getPatient().getId().equals(patientId)) {
+            throw new ApiException(HttpStatus.NOT_FOUND, "Appointment not found");
+        }
+        if (a.getStatus() != AppointmentStatus.REQUESTED && a.getStatus() != AppointmentStatus.SCHEDULED) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "This appointment can no longer be cancelled online");
+        }
+        if (!a.getAppointmentDate().isAfter(today())) {
+            throw new ApiException(HttpStatus.BAD_REQUEST,
+                    "Appointments can only be cancelled online before the day of the visit. Please call the hospital.");
+        }
+        a.setStatus(AppointmentStatus.CANCELLED);
+        a.setCancelReason(reason == null || reason.isBlank() ? "Cancelled by patient" : reason.trim());
+        audit.log(actorId, "APPOINTMENT_CANCELLED_BY_PATIENT", "APPOINTMENT", appointmentId, null);
+        return AppointmentResponse.from(a);
+    }
+
     // ---------- helpers ----------
 
     private Set<Role> rolesFor(AppointmentStatus from, AppointmentStatus to) {
