@@ -21,6 +21,9 @@ public class ActivationCode {
     private String codeHash;
     private Instant expiresAt;
 
+    @Enumerated(EnumType.STRING)
+    private CodePurpose purpose = CodePurpose.ACTIVATION;
+
     /** Set when the code is used or replaced by a newer one. */
     private Instant usedAt;
 

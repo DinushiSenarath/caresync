@@ -1,0 +1,3 @@
+ALTER TABLE activation_codes
+    ADD COLUMN purpose VARCHAR(10) NOT NULL DEFAULT 'ACTIVATION'
+    CHECK (purpose IN ('ACTIVATION','RESET'));

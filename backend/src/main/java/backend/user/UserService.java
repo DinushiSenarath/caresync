@@ -71,6 +71,10 @@ public class UserService {
     @Transactional
     public void resetPassword(Long id, String newPassword, Long actorId) {
         User u = get(id);
+        if (u.getRole() == Role.PATIENT) {
+            throw new ApiException(HttpStatus.BAD_REQUEST,
+                    "Patient passwords are reset with a reset code issued from the patient record");
+        }
         u.setPasswordHash(encoder.encode(newPassword));
         u.setFailedAttempts(0);
         u.setLockedUntil(null);

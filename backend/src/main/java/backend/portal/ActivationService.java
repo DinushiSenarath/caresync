@@ -49,7 +49,7 @@ public class ActivationService {
             throw new ApiException(HttpStatus.CONFLICT, "This patient already has a portal account");
         }
         Instant now = Instant.now();
-        for (ActivationCode old : codes.lockOpenCodes(patientId)) {
+        for (ActivationCode old : codes.lockOpenCodes(patientId, CodePurpose.ACTIVATION)) {
             old.setUsedAt(now);
         }
         String raw = randomCode();
@@ -72,7 +72,7 @@ public class ActivationService {
             throw new ApiException(HttpStatus.BAD_REQUEST, GENERIC);
         }
         Instant now = Instant.now();
-        List<ActivationCode> open = codes.lockOpenCodes(p.getId());
+        List<ActivationCode> open = codes.lockOpenCodes(p.getId(), CodePurpose.ACTIVATION);
         if (open.isEmpty()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, GENERIC);
         }
