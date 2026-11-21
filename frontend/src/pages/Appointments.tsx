@@ -4,6 +4,7 @@ import { api } from '../api'
 import { useAuth } from '../auth'
 import type { Role } from '../auth'
 import type { Appointment, AppointmentStatus, Doctor, Page, Patient, Slot } from '../types'
+import { Link } from 'react-router-dom'
 import {
   btnGhost, btnPrimary, btnSmall, ErrorBox, errMsg, Field, fmtDate, fmtTime, inputCls,
   Modal, Spinner, StatusBadge, STATUS_LABEL, todayStr, useDebounced,
@@ -529,7 +530,11 @@ export default function Appointments() {
                             >
                               {act.label}
                             </button>
-                          ))}
+                          ))}                          
+                          {(role === 'DOCTOR' || role === 'NURSE') &&
+                            (a.status === 'CHECKED_IN' || a.status === 'IN_PROGRESS' || a.status === 'COMPLETED') && (
+                              <Link to={`/appointments/${a.id}`} className={btnSmall}>Open visit</Link>
+                            )}
                         </div>
                       </td>
                     </tr>

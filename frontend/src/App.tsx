@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard'
 import Patients from './pages/Patients'
 import Appointments from './pages/Appointments'
 import Placeholder from './pages/Placeholder'
+import Visit from './pages/Visit'
 
 function RequireAuth() {
   const { user } = useAuth()
@@ -18,6 +19,11 @@ function RequireAuth() {
 function Home() {
   const { user } = useAuth()
   return <Navigate to={user ? homePath(user.role) : '/login'} replace />
+}
+
+function AppointmentRoute() {
+  const { user } = useAuth()
+  return user && (user.role === 'DOCTOR' || user.role === 'NURSE') ? <Visit /> : <Appointments />
 }
 
 const PLACEHOLDERS: { path: string; title: string }[] = [
@@ -46,7 +52,7 @@ export default function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/patients" element={<Patients />} />
             <Route path="/appointments" element={<Appointments />} />
-            <Route path="/appointments/:id" element={<Appointments />} />
+            <Route path="/appointments/:id" element={<AppointmentRoute />} />
             {PLACEHOLDERS.map((p) => (
               <Route key={p.path} path={p.path} element={<Placeholder title={p.title} />} />
             ))}
