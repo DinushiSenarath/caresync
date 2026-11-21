@@ -4,6 +4,8 @@ import { homePath } from './menu'
 import Layout from './components/Layout'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
+import Patients from './pages/Patients'
+import Appointments from './pages/Appointments'
 import Placeholder from './pages/Placeholder'
 
 function RequireAuth() {
@@ -19,8 +21,6 @@ function Home() {
 }
 
 const PLACEHOLDERS: { path: string; title: string }[] = [
-  { path: '/patients', title: 'Patients' },
-  { path: '/appointments', title: 'Appointments' },
   { path: '/registration-requests', title: 'Registration requests' },
   { path: '/pharmacy', title: 'Pharmacy' },
   { path: '/billing', title: 'Billing' },
@@ -44,6 +44,9 @@ export default function App() {
           <Route element={<RequireAuth />}>
             <Route path="/" element={<Home />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/patients" element={<Patients />} />
+            <Route path="/appointments" element={<Appointments />} />
+            <Route path="/appointments/:id" element={<Appointments />} />
             {PLACEHOLDERS.map((p) => (
               <Route key={p.path} path={p.path} element={<Placeholder title={p.title} />} />
             ))}
