@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Collection;
 
 public interface PrescriptionRepository extends JpaRepository<Prescription, Long> {
 
@@ -28,4 +29,6 @@ public interface PrescriptionRepository extends JpaRepository<Prescription, Long
 
     @Query("select p from Prescription p where p.appointment.patient.id = :patientId and p.status <> :excluded order by p.id desc")
     List<Prescription> findForPatient(@Param("patientId") Long patientId, @Param("excluded") PrescriptionStatus excluded);
+
+    long countByStatusIn(Collection<PrescriptionStatus> statuses);
 }

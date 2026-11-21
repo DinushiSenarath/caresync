@@ -21,6 +21,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import backend.notification.NotificationService;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -41,6 +42,7 @@ public class RegistrationService {
     private final ActivationService activation;
     private final UserRepository users;
     private final AuditService audit;
+    private final NotificationService notifications;
 
     // ---------- public submission (deliberately not @Transactional, see note in the guide) ----------
 
@@ -76,6 +78,9 @@ public class RegistrationService {
             return PUBLIC_MESSAGE; // two identical requests at the same moment
         }
         audit.log(null, "REGISTRATION_REQUESTED", "REGISTRATION_REQUEST", req.getId(), null);
+
+        notifications.toRole(Role.RECEPTIONIST, "REGISTRATION_REQUEST",
+                "A new online registration request is waiting for review", "/registration-requests");
         return PUBLIC_MESSAGE;
     }
 

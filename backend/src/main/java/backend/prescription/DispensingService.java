@@ -12,6 +12,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import backend.notification.NotificationService;
+import backend.user.Role;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -31,6 +33,7 @@ public class DispensingService {
     private final UserRepository users;
     private final PrescriptionMapper mapper;
     private final AuditService audit;
+    private final NotificationService notifications;
 
     @Transactional(readOnly = true)
     public PagedResponse<QueueEntry> queue(int page, int size) {
@@ -111,11 +114,22 @@ public class DispensingService {
                 movements.save(s);
             }
             item.setQtyDispensed(item.getQtyDispensed() + line.quantity());
+            int reorder = item.getMedicine().getReorderLevel();
+            if (reorder > 0 && available > reorder && available - line.quantity() <= reorder) {
+                notifications.toRole(Role.PHARMACIST, "LOW_STOCK",
+                        "Low stock: " + item.getMedicine().getName() + " (" + (available - line.quantity()) + " left)",
+                        "/pharmacy/alerts");
+            }
             summary.append(item.getMedicine().getName()).append(" x").append(line.quantity()).append("; ");
         }
 
         boolean complete = p.getItems().stream().allMatch(i -> i.getQtyDispensed() >= i.getQtyPrescribed());
         p.setStatus(complete ? PrescriptionStatus.DISPENSED : PrescriptionStatus.PARTIALLY_DISPENSED);
+        if (complete) {
+            notifications.toRole(Role.CASHIER, "INVOICE_READY",
+                    "Medicines were dispensed for " + p.getAppointment().getPatient().getPatientNo()
+                            + ". The invoice can be prepared.", "/billing");
+        }
         audit.log(actorId, "RX_DISPENSED", "PRESCRIPTION", p.getId(), summary.toString().trim());
         return mapper.toResponse(p);
     }

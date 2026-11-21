@@ -40,4 +40,6 @@ public interface PatientRepository extends JpaRepository<Patient, Long> {
 
     Optional<Patient> findByPatientNoIgnoreCase(String patientNo);
     Optional<Patient> findByUserId(Long userId);
+
+    long countByActiveTrue();
 }

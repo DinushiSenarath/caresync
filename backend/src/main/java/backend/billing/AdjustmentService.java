@@ -11,6 +11,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import backend.notification.NotificationService;
+import backend.user.Role;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -26,6 +28,7 @@ public class AdjustmentService {
     private final PaymentRepository payments;
     private final UserRepository users;
     private final AuditService audit;
+    private final NotificationService notifications;
 
     // ---------- reading ----------
 
@@ -88,6 +91,9 @@ public class AdjustmentService {
 
         audit.log(actorId, "ADJUSTMENT_REQUESTED", "INVOICE", invoiceId,
                 r.type() + " " + amount + ", reason=" + adj.getReason());
+        notifications.toRole(Role.ADMIN, "ADJUSTMENT_REQUESTED",
+                "A " + r.type().name().toLowerCase() + " request for invoice " + inv.getInvoiceNo()
+                        + " needs your decision", "/billing/adjustments");
         return AdjustmentResponse.from(adj);
     }
 
@@ -126,6 +132,10 @@ public class AdjustmentService {
 
         audit.log(actorId, r.approve() ? "ADJUSTMENT_APPROVED" : "ADJUSTMENT_REJECTED", "INVOICE", inv.getId(),
                 adj.getType() + " " + adj.getAmount() + (note == null ? "" : ", note=" + note));
+            
+        notifications.toUser(adj.getRequestedBy().getId(), "ADJUSTMENT_DECIDED",
+                "Your " + adj.getType().name().toLowerCase() + " request for invoice " + inv.getInvoiceNo()
+                        + " was " + adj.getStatus().name().toLowerCase(), "/billing/invoices/" + inv.getId());
         return AdjustmentResponse.from(adj);
     }
 

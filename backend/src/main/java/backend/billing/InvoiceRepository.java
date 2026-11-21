@@ -10,6 +10,8 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
+import java.math.BigDecimal;
+import java.util.Collection;
 
 public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
 
@@ -32,4 +34,9 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
                          @Param("anyPatient") boolean anyPatient,
                          @Param("patientId") Long patientId,
                          Pageable pageable);
+
+    long countByStatus(InvoiceStatus status);
+
+    @Query("select sum(i.total - i.amountPaid) from Invoice i where i.status in :statuses")
+    BigDecimal outstanding(@Param("statuses") Collection<InvoiceStatus> statuses);
 }

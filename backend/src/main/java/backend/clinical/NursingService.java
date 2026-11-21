@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import backend.notification.NotificationService;
 
 import java.util.List;
 
@@ -24,6 +25,7 @@ public class NursingService {
     private final UserRepository users;
     private final AppointmentAccess access;
     private final AuditService audit;
+    private final NotificationService notifications;
 
     @Transactional(readOnly = true)
     public List<VitalResponse> listVitals(Long appointmentId, Long actorId, Role role) {
@@ -61,6 +63,8 @@ public class NursingService {
         v.setHeight(r.height());
         vitals.save(v);
         audit.log(actorId, "VITALS_RECORDED", "VITAL_SIGN", v.getId(), "appointmentId=" + appointmentId);
+        notifications.toUser(a.getDoctor().getUser().getId(), "VITALS_RECORDED",
+                "Vitals recorded for patient " + a.getPatient().getPatientNo(), "/appointments/" + appointmentId);
         return VitalResponse.from(v);
     }
 

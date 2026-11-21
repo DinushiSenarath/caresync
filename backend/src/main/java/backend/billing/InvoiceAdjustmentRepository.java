@@ -27,4 +27,6 @@ public interface InvoiceAdjustmentRepository extends JpaRepository<InvoiceAdjust
             order by a.createdAt desc, a.id desc
             """)
     Page<InvoiceAdjustment> search(@Param("statuses") List<AdjustmentStatus> statuses, Pageable pageable);
+
+    long countByStatus(AdjustmentStatus status);
 }

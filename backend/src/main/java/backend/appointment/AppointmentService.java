@@ -15,6 +15,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import backend.notification.NotificationService;
 
 import java.time.*;
 import java.util.*;
@@ -32,6 +33,7 @@ public class AppointmentService {
     private final PatientRepository patients;
     private final DoctorRepository doctors;
     private final AuditService audit;
+    private final NotificationService notifications;
 
     // ---------- reading ----------
 
@@ -178,6 +180,7 @@ public class AppointmentService {
             a.setCancelReason(r.reason().trim());
         }
         audit.log(actorId, "APPOINTMENT_STATUS_CHANGED", "APPOINTMENT", id, from + " -> " + to);
+        notifyStatusChange(a, from, to);
         return AppointmentResponse.from(a);
     }
 
@@ -205,6 +208,9 @@ public class AppointmentService {
         saveChecked(a);
         audit.log(actorId, "APPOINTMENT_REQUESTED", "APPOINTMENT", a.getId(),
                 "doctorId=" + d.getId() + ", " + date + " " + time);
+        notifications.toRole(Role.RECEPTIONIST, "APPOINTMENT_REQUEST",
+                "New appointment request from " + patient.getPatientNo() + " for " + date + " " + time,
+                "/appointments/" + a.getId());
         return AppointmentResponse.from(a);
     }
 
@@ -228,7 +234,26 @@ public class AppointmentService {
     }
 
     // ---------- helpers ----------
-
+    private void notifyStatusChange(Appointment a, AppointmentStatus from, AppointmentStatus to) {
+        String when = a.getAppointmentDate() + " " + a.getStartTime();
+        Long patientUserId = a.getPatient().getUserId();
+        if (from == AppointmentStatus.REQUESTED && patientUserId != null) {
+            if (to == AppointmentStatus.SCHEDULED) {
+                notifications.toUser(patientUserId, "REQUEST_CONFIRMED",
+                        "Your appointment request for " + when + " was confirmed.", "/portal/appointments");
+            } else if (to == AppointmentStatus.CANCELLED) {
+                notifications.toUser(patientUserId, "REQUEST_REJECTED",
+                        "Your appointment request for " + when + " could not be accepted. Please contact the hospital.",
+                        "/portal/appointments");
+            }
+        }
+        if (to == AppointmentStatus.CHECKED_IN) {
+            String text = "Patient " + a.getPatient().getPatientNo() + " has checked in for " + a.getStartTime();
+            String link = "/appointments/" + a.getId();
+            notifications.toRole(Role.NURSE, "PATIENT_CHECKED_IN", text, link);
+            notifications.toUser(a.getDoctor().getUser().getId(), "PATIENT_CHECKED_IN", text, link);
+        }
+    }
     private Set<Role> rolesFor(AppointmentStatus from, AppointmentStatus to) {
         return switch (from) {
             case REQUESTED -> (to == AppointmentStatus.SCHEDULED || to == AppointmentStatus.CANCELLED)

@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import backend.notification.NotificationService;
 
 import java.time.Instant;
 import java.util.HashSet;
@@ -28,6 +29,7 @@ public class PrescriptionService {
     private final AppointmentAccess access;
     private final PrescriptionMapper mapper;
     private final AuditService audit;
+    private final NotificationService notifications;
 
     @Transactional
     public PrescriptionResponse create(Long appointmentId, PrescriptionRequest r, Long actorId) {
@@ -87,6 +89,9 @@ public class PrescriptionService {
         p.setStatus(PrescriptionStatus.ISSUED);
         p.setIssuedAt(Instant.now());
         audit.log(actorId, "RX_ISSUED", "PRESCRIPTION", id, "items=" + p.getItems().size());
+        notifications.toRole(Role.PHARMACIST, "PRESCRIPTION_ISSUED",
+                "A prescription for " + p.getAppointment().getPatient().getPatientNo() + " is ready to dispense",
+                "/pharmacy/queue");
         return mapper.toResponse(p);
     }
 
