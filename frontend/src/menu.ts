@@ -6,13 +6,14 @@ export interface MenuItem {
   roles: Role[]
 }
 
-const STAFF: Role[] = ['ADMIN', 'RECEPTIONIST', 'DOCTOR', 'NURSE', 'PHARMACIST', 'CASHIER']
+const STAFF: Role[] = ['ADMIN', 'RECEPTIONIST', 'DOCTOR', 'NURSE', 'PHARMACIST', 'CASHIER', 'LAB_TECH']
 
 export const MENU: MenuItem[] = [
   { label: 'Dashboard', path: '/dashboard', roles: STAFF },
   { label: 'Patients', path: '/patients', roles: ['ADMIN', 'RECEPTIONIST', 'DOCTOR', 'NURSE'] },
   { label: 'Appointments', path: '/appointments', roles: ['ADMIN', 'RECEPTIONIST', 'DOCTOR', 'NURSE'] },
   { label: 'Registration requests', path: '/registration-requests', roles: ['ADMIN', 'RECEPTIONIST'] },
+  { label: 'Laboratory', path: '/laboratory', roles: ['ADMIN', 'LAB_TECH'] },
   { label: 'Pharmacy', path: '/pharmacy', roles: ['ADMIN', 'PHARMACIST'] },
   { label: 'Billing', path: '/billing', roles: ['ADMIN', 'CASHIER'] },
   { label: 'Staff accounts', path: '/admin/users', roles: ['ADMIN'] },
@@ -22,6 +23,7 @@ export const MENU: MenuItem[] = [
   { label: 'Home', path: '/portal', roles: ['PATIENT'] },
   { label: 'My appointments', path: '/portal/appointments', roles: ['PATIENT'] },
   { label: 'My prescriptions', path: '/portal/prescriptions', roles: ['PATIENT'] },
+  { label: 'My lab results', path: '/portal/lab', roles: ['PATIENT'] },
   { label: 'My bills', path: '/portal/bills', roles: ['PATIENT'] },
   { label: 'My details', path: '/portal/profile', roles: ['PATIENT'] },
 ]

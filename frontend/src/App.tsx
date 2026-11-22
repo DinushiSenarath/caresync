@@ -11,6 +11,7 @@ import Visit from './pages/Visit'
 import Pharmacy from './pages/Pharmacy'
 import Billing from './pages/Billing'
 import Prices from './pages/Prices'
+import Laboratory from './pages/Laboratory'
 
 function RequireAuth() {
   const { user } = useAuth()
@@ -33,12 +34,13 @@ const PLACEHOLDERS: { path: string; title: string }[] = [
   { path: '/registration-requests', title: 'Registration requests' },
   { path: '/admin/users', title: 'Staff accounts' },
   { path: '/admin/doctors', title: 'Departments and doctors' },
- { path: '/audit', title: 'Audit log' },
+  { path: '/audit', title: 'Audit log' },
   { path: '/portal', title: 'Welcome' },
   { path: '/portal/appointments', title: 'My appointments' },
   { path: '/portal/prescriptions', title: 'My prescriptions' },
   { path: '/portal/bills', title: 'My bills' },
   { path: '/portal/profile', title: 'My details' },
+  { path: '/portal/lab', title: 'My lab results' },
 ]
 
 export default function App() {
@@ -60,6 +62,8 @@ export default function App() {
             <Route path="/billing/adjustments" element={<Billing />} />
             <Route path="/billing/invoices/:id" element={<Billing />} />
             <Route path="/admin/prices" element={<Prices />} />
+            <Route path="/laboratory" element={<Laboratory />} />
+
             {PLACEHOLDERS.map((p) => (
               <Route key={p.path} path={p.path} element={<Placeholder title={p.title} />} />
             ))}

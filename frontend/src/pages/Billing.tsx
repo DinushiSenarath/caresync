@@ -96,6 +96,7 @@ interface Billable {
   patientName: string
   doctorName: string
   status: string
+  pendingLabRequests: number
 }
 
 interface Receipt {
@@ -570,6 +571,7 @@ function CreateInvoiceModal({
   const [services, setServices] = useState<ServiceCharge[] | null>(null)
   const [qty, setQty] = useState<Record<number, string>>({})
   const [includeMeds, setIncludeMeds] = useState(true)
+  const [includeLabs, setIncludeLabs] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -603,7 +605,7 @@ function CreateInvoiceModal({
     try {
       const r = await api<InvoiceDetail>('/api/invoices', {
         method: 'POST',
-        body: { appointmentId: appt.appointmentId, services: lines, includeDispensedMedicines: includeMeds },
+        body: { appointmentId: appt.appointmentId, services: lines, includeDispensedMedicines: includeMeds, includeLabTests: includeLabs },
       })
       onCreated(r.id)
     } catch (err) {
@@ -646,6 +648,15 @@ function CreateInvoiceModal({
           <input type="checkbox" checked={includeMeds} onChange={(e) => setIncludeMeds(e.target.checked)} />
           Include medicines dispensed for this visit
         </label>
+        <label className="mt-2 flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={includeLabs} onChange={(e) => setIncludeLabs(e.target.checked)} />
+          Include laboratory tests (collected or released)
+        </label>
+        {appt.pendingLabRequests > 0 && (
+          <p className="mt-1 rounded bg-amber-50 p-2 text-xs text-amber-900">
+            {appt.pendingLabRequests} lab request(s) have not had a sample collected yet. Tests are only charged once the sample is collected, so creating the invoice now will leave them out.
+          </p>
+        )}
         <p className="mt-1 text-xs text-slate-500">Prices come from the price list. They cannot be changed here.</p>
         <div className="mt-5 flex justify-end gap-2">
           <button type="button" className={btnGhost} onClick={onClose}>Cancel</button>
@@ -693,7 +704,7 @@ function NewInvoiceTab({ onCreated }: { onCreated: (id: number) => void }) {
               {list?.map((a) => (
                 <tr key={a.appointmentId} className="border-t">
                   <td className="px-3 py-2 whitespace-nowrap">{fmtDate(a.date)} {fmtTime(a.startTime)}</td>
-                  <td className="px-3 py-2">{a.patientName} <span className="text-slate-400">({a.patientNo})</span></td>
+                  <td className="px-3 py-2">{a.patientName} <span className="text-slate-400">({a.patientNo})</span>{a.pendingLabRequests > 0 && <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-800">Lab pending</span>}</td>
                   <td className="px-3 py-2">{a.doctorName}</td>
                   <td className="px-3 py-2">{nice(a.status)}</td>
                   <td className="px-3 py-2"><button className={btnPrimary} onClick={() => setPicked(a)}>Create invoice</button></td>

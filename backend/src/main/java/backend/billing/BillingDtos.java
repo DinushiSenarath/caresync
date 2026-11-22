@@ -28,7 +28,8 @@ public final class BillingDtos {
     public record InvoiceRequest(
             @NotNull Long appointmentId,
             @Valid @Size(max = 20) List<ServiceLine> services,
-            Boolean includeDispensedMedicines) {}
+            Boolean includeDispensedMedicines,
+            Boolean includeLabTests) {}
 
     public record PaymentRequest(
             @NotNull @DecimalMin("0.01") @Digits(integer = 10, fraction = 2) BigDecimal amount,

@@ -5,6 +5,9 @@ import { api, ApiError } from '../api'
 import { useAuth } from '../auth'
 import type { Role } from '../auth'
 import type { Appointment, Page, Patient } from '../types'
+import { ResultsTable } from '../components/LabResults'
+import { LabStatusBadge, PriorityBadge } from '../components/LabResults'
+import type { LabRequest, LabTest } from '../labTypes'
 import {
   ageOf, btnGhost, btnPrimary, btnSmall, ErrorBox, errMsg, Field, fmtDate, fmtTime,
   inputCls, Modal, Spinner, StatusBadge, useDebounced,
@@ -766,6 +769,147 @@ function PrescriptionSection({ appt, role }: { appt: Appointment; role: Role | u
   )
 }
 
+/* ---------------- laboratory (doctor) ---------------- */
+
+function LabRequestModal({ appointmentId, onClose, onSaved }: { appointmentId: number; onClose: () => void; onSaved: () => void }) {
+  const [tests, setTests] = useState<LabTest[] | null>(null)
+  const [picked, setPicked] = useState<number[]>([])
+  const [filter, setFilter] = useState('')
+  const [priority, setPriority] = useState('ROUTINE')
+  const [notes, setNotes] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    api<LabTest[]>('/api/lab/tests', { query: { activeOnly: true } })
+      .then((r) => { if (active) setTests(r) })
+      .catch((e) => { if (active) setError(detailMsg(e)) })
+    return () => { active = false }
+  }, [])
+
+  const shown = (tests ?? []).filter((t) => t.name.toLowerCase().includes(filter.trim().toLowerCase()))
+
+  async function submit(e: FormEvent) {
+    e.preventDefault()
+    setError(null)
+    if (picked.length === 0) {
+      setError('Choose at least one test.')
+      return
+    }
+    setBusy(true)
+    try {
+      await api('/api/lab/requests', {
+        method: 'POST',
+        body: { appointmentId, testIds: picked, priority, clinicalNotes: notes.trim() || null },
+      })
+      onSaved()
+    } catch (err) {
+      setError(detailMsg(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Modal title="Request laboratory tests" onClose={onClose} wide>
+      <form onSubmit={submit}>
+        <ErrorBox message={error} />
+        <input className={inputCls} placeholder="Filter tests" value={filter} onChange={(e) => setFilter(e.target.value)} aria-label="Filter tests" />
+        {!tests && !error && <Spinner />}
+        <ul className="mt-2 grid max-h-64 gap-1 overflow-y-auto sm:grid-cols-2">
+          {shown.map((t) => (
+            <li key={t.id}>
+              <label className="flex items-start gap-2 rounded border px-3 py-2 text-sm hover:bg-slate-50">
+                <input
+                  type="checkbox"
+                  checked={picked.includes(t.id)}
+                  onChange={(e) => setPicked((p) => (e.target.checked ? [...p, t.id] : p.filter((x) => x !== t.id)))}
+                />
+                <span>{t.name}<span className="block text-xs text-slate-500">{t.specimen}</span></span>
+              </label>
+            </li>
+          ))}
+        </ul>
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <Field label="Priority">
+            <select className={inputCls} value={priority} onChange={(e) => setPriority(e.target.value)}>
+              <option value="ROUTINE">Routine</option>
+              <option value="URGENT">Urgent</option>
+            </select>
+          </Field>
+          <Field label="Note for the laboratory (optional)" className="sm:col-span-2">
+            <input className={inputCls} maxLength={500} value={notes} onChange={(e) => setNotes(e.target.value)} />
+          </Field>
+        </div>
+        <div className="mt-5 flex justify-end gap-2">
+          <button type="button" className={btnGhost} onClick={onClose}>Cancel</button>
+          <button type="submit" className={btnPrimary} disabled={busy}>{busy ? 'Sending...' : `Request ${picked.length || ''} test${picked.length === 1 ? '' : 's'}`}</button>
+        </div>
+      </form>
+    </Modal>
+  )
+}
+
+function LabSection({ appt, role }: { appt: Appointment; role: Role | undefined }) {
+  const [list, setList] = useState<LabRequest[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [reload, setReload] = useState(0)
+  const [open, setOpen] = useState(false)
+  const canRequest = role === 'DOCTOR' && (appt.status === 'IN_PROGRESS' || appt.status === 'COMPLETED')
+
+  useEffect(() => {
+    let active = true
+    api<LabRequest[]>(`/api/appointments/${appt.id}/lab-requests`)
+      .then((r) => { if (active) setList(r) })
+      .catch((e) => { if (active) setError(detailMsg(e)) })
+    return () => { active = false }
+  }, [appt.id, reload])
+
+  async function cancel(r: LabRequest) {
+    const reason = window.prompt('Reason for cancelling this lab request:')
+    if (!reason || !reason.trim()) return
+    setError(null)
+    try {
+      await api(`/api/lab/requests/${r.id}/cancel`, { method: 'POST', body: { reason: reason.trim() } })
+      setReload((n) => n + 1)
+    } catch (e) {
+      setError(detailMsg(e))
+    }
+  }
+
+  return (
+    <Section title="Laboratory">
+      <ErrorBox message={error} />
+      {canRequest && <div className="mb-3"><button className={btnPrimary} onClick={() => setOpen(true)}>Request tests</button></div>}
+      {role === 'DOCTOR' && !canRequest && <p className="mb-3 text-sm text-slate-500">Start the consultation to request tests.</p>}
+      {!list && !error && <Spinner />}
+      {list && list.length === 0 && <p className="text-sm text-slate-500">No laboratory requests.</p>}
+      <div className="space-y-3">
+        {list?.map((r) => (
+          <div key={r.id} className="rounded-lg border p-3 text-sm">
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="font-medium">{r.requestNo}</span>
+                <PriorityBadge priority={r.priority} />
+                <LabStatusBadge status={r.status} />
+              </div>
+              {r.status === 'REQUESTED' && <button className={`${btnSmall} text-red-700`} onClick={() => void cancel(r)}>Cancel</button>}
+            </div>
+            {r.status === 'CANCELLED' && <p className="mb-2 text-slate-500">Cancelled: {r.cancelReason}</p>}
+            {r.status === 'COLLECTED' && <p className="mb-2 text-slate-500">The sample has been collected. Results will appear here once the laboratory releases them.</p>}
+            <ResultsTable items={r.items} showResults={r.status === 'VERIFIED'} />
+            {r.status === 'VERIFIED' && r.verifiedAt && (
+              <p className="mt-2 text-xs text-slate-500">Released {new Date(r.verifiedAt).toLocaleString()} by {r.verifiedByName}</p>
+            )}
+          </div>
+        ))}
+      </div>
+      {open && <LabRequestModal appointmentId={appt.id} onClose={() => setOpen(false)} onSaved={() => { setOpen(false); setReload((n) => n + 1) }} />}
+    </Section>
+  )
+}
+
 /* ---------------- the page ---------------- */
 
 export default function Visit() {
@@ -863,6 +1007,7 @@ export default function Visit() {
       <VitalsSection appt={appt} role={role} />
       <ConsultationSection appt={appt} role={role} />
       <PrescriptionSection appt={appt} role={role} />
+      {role === 'DOCTOR' && <LabSection appt={appt} role={role} />}
       <NursingNotesSection appt={appt} role={role} />
     </div>
   )

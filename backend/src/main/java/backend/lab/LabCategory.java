@@ -1,0 +1,3 @@
+package backend.lab;
+
+public enum LabCategory { HAEMATOLOGY, BIOCHEMISTRY, MICROBIOLOGY, URINALYSIS, IMMUNOLOGY, OTHER }

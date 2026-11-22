@@ -20,6 +20,10 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import backend.lab.LabRequest;
+import backend.lab.LabRequestItem;
+import backend.lab.LabRequestRepository;
+import backend.lab.LabStatus;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -43,6 +47,7 @@ public class BillingService {
     private final PrescriptionRepository prescriptions;
     private final UserRepository users;
     private final AuditService audit;
+    private final LabRequestRepository labRequests;
 
     // ---------- reading ----------
 
@@ -118,6 +123,18 @@ public class BillingService {
                     }
                     String description = m.getName() + (m.getStrength() == null ? "" : " " + m.getStrength());
                     addItem(inv, "MEDICINE", description, pi.getQtyDispensed(), m.getUnitPrice());
+                }
+            }
+        }
+
+        if (Boolean.TRUE.equals(r.includeLabTests())) {
+            for (LabRequest lr : labRequests.findByAppointmentIdOrderByIdAsc(a.getId())) {
+                if (lr.getStatus() != LabStatus.COLLECTED && lr.getStatus() != LabStatus.VERIFIED) continue;
+                for (LabRequestItem li : lr.getItems()) {
+                    if (li.getPrice() == null || li.getPrice().signum() <= 0) {
+                        throw new ApiException(HttpStatus.BAD_REQUEST, li.getTestName() + " has no price set");
+                    }
+                    addItem(inv, "LAB", li.getTestName(), 1, li.getPrice());
                 }
             }
         }
