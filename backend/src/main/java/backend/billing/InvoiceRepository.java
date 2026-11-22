@@ -39,4 +39,6 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
 
     @Query("select sum(i.total - i.amountPaid) from Invoice i where i.status in :statuses")
     BigDecimal outstanding(@Param("statuses") Collection<InvoiceStatus> statuses);
+
+    boolean existsByAdmissionIdAndStatusNot(Long admissionId, InvoiceStatus status);
 }

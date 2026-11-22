@@ -29,6 +29,7 @@ public class Invoice {
     private Patient patient;
 
     private Long appointmentId;
+    private Long admissionId;
 
     private BigDecimal subtotal = BigDecimal.ZERO;
     private BigDecimal discount = BigDecimal.ZERO;

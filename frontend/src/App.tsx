@@ -12,6 +12,7 @@ import Pharmacy from './pages/Pharmacy'
 import Billing from './pages/Billing'
 import Prices from './pages/Prices'
 import Laboratory from './pages/Laboratory'
+import Wards from './pages/Wards'
 
 function RequireAuth() {
   const { user } = useAuth()
@@ -63,6 +64,7 @@ export default function App() {
             <Route path="/billing/invoices/:id" element={<Billing />} />
             <Route path="/admin/prices" element={<Prices />} />
             <Route path="/laboratory" element={<Laboratory />} />
+            <Route path="/wards" element={<Wards />} />
 
             {PLACEHOLDERS.map((p) => (
               <Route key={p.path} path={p.path} element={<Placeholder title={p.title} />} />

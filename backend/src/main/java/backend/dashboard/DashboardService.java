@@ -29,6 +29,10 @@ import org.springframework.transaction.annotation.Transactional;
 import backend.lab.LabPriority;
 import backend.lab.LabRequestRepository;
 import backend.lab.LabStatus;
+import backend.ward.AdmissionRepository;
+import backend.ward.AdmissionStatus;
+import backend.ward.BedRepository;
+import backend.ward.BedStayRepository;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -57,6 +61,9 @@ public class DashboardService {
     private final RegistrationRequestRepository registrations;
     private final PharmacyService pharmacy;
     private final LabRequestRepository labRequests;
+    private final AdmissionRepository admissions;
+    private final BedRepository beds;
+    private final BedStayRepository bedStays;
 
     @Transactional(readOnly = true)
     public DashboardResponse summary(Long userId, Role role) {
@@ -74,6 +81,8 @@ public class DashboardService {
                 c.put("pendingRegistrations", registrations.countByStatus(RegistrationStatus.PENDING));
                 c.put("pendingAdjustments", adjustments.countByStatus(AdjustmentStatus.PENDING));
                 c.put("labRequestsPending", labRequests.countByStatusIn(List.of(LabStatus.REQUESTED, LabStatus.COLLECTED)));
+                c.put("inpatientsNow", admissions.countByStatus(AdmissionStatus.ADMITTED));
+                c.put("freeBeds", Math.max(0L, beds.countUsable() - bedStays.countByToAtIsNull()));
                 c.put("revenueToday", collectedToday(today));
                 addPharmacyAlerts(c);
             }
@@ -128,6 +137,20 @@ public class DashboardService {
                 c.put("urgentWaitingForSample", labRequests.countByStatusAndPriority(LabStatus.REQUESTED, LabPriority.URGENT));
                 c.put("awaitingResults", labRequests.countByStatus(LabStatus.COLLECTED));
                 c.put("releasedToday", labRequests.countByStatusAndVerifiedAtBetween(LabStatus.VERIFIED, dayStart, dayEnd));
+            }
+
+            case WARD_STAFF -> {
+                Instant wardDayStart = today.atStartOfDay(ZONE).toInstant();
+                Instant wardDayEnd = today.plusDays(1).atStartOfDay(ZONE).toInstant();
+                long usable = beds.countUsable();
+                long occupied = bedStays.countByToAtIsNull();
+                c.put("inpatientsNow", admissions.countByStatus(AdmissionStatus.ADMITTED));
+                c.put("freeBeds", Math.max(0L, usable - occupied));
+                c.put("occupancyPercent", usable == 0 ? 0L : Math.round(occupied * 100.0 / usable));
+                c.put("admittedToday", admissions.countByAdmittedAtBetweenAndStatusNot(
+                        wardDayStart, wardDayEnd, AdmissionStatus.CANCELLED));
+                c.put("dischargedToday", admissions.countByStatusAndDischargedAtBetween(
+                        AdmissionStatus.DISCHARGED, wardDayStart, wardDayEnd));
             }
 
             default -> throw new ApiException(HttpStatus.FORBIDDEN, "There is no dashboard for your role");

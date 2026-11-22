@@ -113,6 +113,16 @@ interface Receipt {
   refund: boolean
 }
 
+interface BillableAdmission {
+  admissionId: number
+  admissionNo: string
+  patientNo: string
+  patientName: string
+  doctorName: string
+  admittedAt: string
+  dischargedAt: string
+}
+
 const METHODS: { value: string; label: string }[] = [
   { value: 'CASH', label: 'Cash' },
   { value: 'CARD', label: 'Card' },
@@ -667,24 +677,109 @@ function CreateInvoiceModal({
   )
 }
 
+function CreateAdmissionInvoiceModal({
+  adm, onClose, onCreated,
+}: { adm: BillableAdmission; onClose: () => void; onCreated: (id: number) => void }) {
+  const [services, setServices] = useState<ServiceCharge[] | null>(null)
+  const [qty, setQty] = useState<Record<number, string>>({})
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    api<ServiceCharge[]>('/api/service-charges', { query: { activeOnly: true } })
+      .then((r) => { if (active) setServices(r) })
+      .catch((e) => { if (active) setError(detailMsg(e)) })
+    return () => { active = false }
+  }, [])
+
+  function toggle(id: number, on: boolean) {
+    setQty((p) => {
+      const next = { ...p }
+      if (on) next[id] = '1'
+      else delete next[id]
+      return next
+    })
+  }
+
+  async function submit(e: FormEvent) {
+    e.preventDefault()
+    setError(null)
+    const lines: { serviceChargeId: number; quantity: number }[] = []
+    for (const [key, value] of Object.entries(qty)) {
+      const n = Number(value)
+      if (!Number.isInteger(n) || n < 1 || n > 100) { setError('Quantities must be whole numbers from 1 to 100.'); return }
+      lines.push({ serviceChargeId: Number(key), quantity: n })
+    }
+    setBusy(true)
+    try {
+      const r = await api<InvoiceDetail>('/api/invoices', { method: 'POST', body: { admissionId: adm.admissionId, services: lines } })
+      onCreated(r.id)
+    } catch (err) {
+      setError(detailMsg(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Modal title="Create admission invoice" onClose={onClose}>
+      <form onSubmit={submit}>
+        <p className="mb-1 text-sm text-slate-600">{adm.patientName} ({adm.patientNo}) · {adm.admissionNo} · {adm.doctorName}</p>
+        <p className="mb-3 text-sm text-slate-600">Admitted {fmtDateTime(adm.admittedAt)}, discharged {fmtDateTime(adm.dischargedAt)}.</p>
+        <p className="mb-3 rounded bg-slate-50 p-2 text-xs text-slate-600">
+          Bed charges are added automatically from the ward and bed history: one day for each night, at the rate of the bed the patient was in, with a minimum of one day. You can add service lines below.
+        </p>
+        <ErrorBox message={error} />
+        {!services && !error && <Spinner />}
+        {services && (
+          <ul className="space-y-2">
+            {services.map((s) => (
+              <li key={s.id} className="flex items-center justify-between gap-2 rounded border px-3 py-2 text-sm">
+                <label className="flex items-center gap-2">
+                  <input type="checkbox" checked={qty[s.id] !== undefined} onChange={(e) => toggle(s.id, e.target.checked)} />
+                  {s.name} <span className="text-slate-400">{fmtMoney(s.price)}</span>
+                </label>
+                {qty[s.id] !== undefined && (
+                  <input className={`${inputCls} w-20`} inputMode="numeric" aria-label={`Quantity for ${s.name}`} value={qty[s.id]} onChange={(e) => setQty((p) => ({ ...p, [s.id]: e.target.value }))} />
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="mt-5 flex justify-end gap-2">
+          <button type="button" className={btnGhost} onClick={onClose}>Cancel</button>
+          <button type="submit" className={btnPrimary} disabled={busy}>{busy ? 'Creating...' : 'Create invoice'}</button>
+        </div>
+      </form>
+    </Modal>
+  )
+}
+
 function NewInvoiceTab({ onCreated }: { onCreated: (id: number) => void }) {
   const [list, setList] = useState<Billable[] | null>(null)
+  const [admissions, setAdmissions] = useState<BillableAdmission[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [picked, setPicked] = useState<Billable | null>(null)
+  const [pickedAdm, setPickedAdm] = useState<BillableAdmission | null>(null)
   const [reload, setReload] = useState(0)
 
   useEffect(() => {
     let active = true
-    api<Billable[]>('/api/billing/billable-appointments')
-      .then((r) => { if (active) { setList(r); setError(null) } })
+    Promise.all([
+      api<Billable[]>('/api/billing/billable-appointments'),
+      api<BillableAdmission[]>('/api/billing/billable-admissions'),
+    ])
+      .then(([a, b]) => { if (active) { setList(a); setAdmissions(b); setError(null) } })
       .catch((e) => { if (active) setError(detailMsg(e)) })
     return () => { active = false }
   }, [reload])
 
   return (
     <div>
-      <p className="mb-3 text-sm text-slate-500">Visits from the last 7 days that have started and are not yet invoiced.</p>
       <ErrorBox message={error} />
+      <h2 className="mb-1 text-lg font-medium">Visits</h2>
+      <p className="mb-3 text-sm text-slate-500">Visits from the last 7 days that have started and are not yet invoiced.</p>
       {!list && !error ? (
         <Spinner />
       ) : (
@@ -714,11 +809,49 @@ function NewInvoiceTab({ onCreated }: { onCreated: (id: number) => void }) {
           </table>
         </div>
       )}
+
+      <h2 className="mb-1 mt-8 text-lg font-medium">Discharged patients</h2>
+      <p className="mb-3 text-sm text-slate-500">Hospital stays finished in the last 30 days that are not yet invoiced.</p>
+      {admissions && (
+        <div className="overflow-x-auto rounded-xl border bg-white">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-slate-50 text-slate-500">
+              <tr>
+                <th className="px-3 py-2">Admission</th>
+                <th className="px-3 py-2">Patient</th>
+                <th className="px-3 py-2">Admitted</th>
+                <th className="px-3 py-2">Discharged</th>
+                <th className="px-3 py-2"> </th>
+              </tr>
+            </thead>
+            <tbody>
+              {admissions.length === 0 && <tr><td colSpan={5} className="px-3 py-6 text-center text-slate-500">No discharged patients are waiting to be invoiced.</td></tr>}
+              {admissions.map((a) => (
+                <tr key={a.admissionId} className="border-t">
+                  <td className="px-3 py-2 font-medium">{a.admissionNo}</td>
+                  <td className="px-3 py-2">{a.patientName} <span className="text-slate-400">({a.patientNo})</span></td>
+                  <td className="px-3 py-2 whitespace-nowrap">{fmtDateTime(a.admittedAt)}</td>
+                  <td className="px-3 py-2 whitespace-nowrap">{fmtDateTime(a.dischargedAt)}</td>
+                  <td className="px-3 py-2"><button className={btnPrimary} onClick={() => setPickedAdm(a)}>Create invoice</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
       {picked && (
         <CreateInvoiceModal
           appt={picked}
           onClose={() => setPicked(null)}
           onCreated={(id) => { setPicked(null); setReload((n) => n + 1); onCreated(id) }}
+        />
+      )}
+      {pickedAdm && (
+        <CreateAdmissionInvoiceModal
+          adm={pickedAdm}
+          onClose={() => setPickedAdm(null)}
+          onCreated={(id) => { setPickedAdm(null); setReload((n) => n + 1); onCreated(id) }}
         />
       )}
     </div>

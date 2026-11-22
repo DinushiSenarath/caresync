@@ -18,7 +18,7 @@ public class DashboardController {
     private final DashboardService service;
 
     @GetMapping("/summary")
-    @PreAuthorize("hasAnyRole('ADMIN','RECEPTIONIST','DOCTOR','NURSE','PHARMACIST','CASHIER','LAB_TECH')")
+    @PreAuthorize("hasAnyRole('ADMIN','RECEPTIONIST','DOCTOR','NURSE','PHARMACIST','CASHIER','LAB_TECH','WARD_STAFF')")
     public DashboardResponse summary(@AuthenticationPrincipal Jwt jwt) {
         return service.summary(JwtUtil.userId(jwt), JwtUtil.role(jwt));
     }

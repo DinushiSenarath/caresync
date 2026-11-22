@@ -7,6 +7,10 @@ import backend.audit.AuditService;
 import backend.billing.BillingDtos.*;
 import backend.common.ApiException;
 import backend.common.PagedResponse;
+import backend.lab.LabRequest;
+import backend.lab.LabRequestItem;
+import backend.lab.LabRequestRepository;
+import backend.lab.LabStatus;
 import backend.pharmacy.Medicine;
 import backend.prescription.Prescription;
 import backend.prescription.PrescriptionItem;
@@ -14,19 +18,22 @@ import backend.prescription.PrescriptionRepository;
 import backend.prescription.PrescriptionStatus;
 import backend.user.User;
 import backend.user.UserRepository;
+import backend.ward.Admission;
+import backend.ward.AdmissionRepository;
+import backend.ward.AdmissionStatus;
+import backend.ward.BedStay;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import backend.lab.LabRequest;
-import backend.lab.LabRequestItem;
-import backend.lab.LabRequestRepository;
-import backend.lab.LabStatus;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
@@ -37,6 +44,7 @@ import java.util.Set;
 public class BillingService {
 
     private static final BigDecimal ZERO = BigDecimal.ZERO.setScale(2);
+    private static final ZoneId ZONE = ZoneId.of("Asia/Colombo");
     private static final Set<AppointmentStatus> BILLABLE =
             EnumSet.of(AppointmentStatus.CHECKED_IN, AppointmentStatus.IN_PROGRESS, AppointmentStatus.COMPLETED);
 
@@ -45,9 +53,10 @@ public class BillingService {
     private final ServiceChargeRepository charges;
     private final AppointmentRepository appointments;
     private final PrescriptionRepository prescriptions;
+    private final LabRequestRepository labRequests;
+    private final AdmissionRepository admissionRepo;
     private final UserRepository users;
     private final AuditService audit;
-    private final LabRequestRepository labRequests;
 
     // ---------- reading ----------
 
@@ -79,6 +88,15 @@ public class BillingService {
 
     @Transactional
     public InvoiceDetail createInvoice(InvoiceRequest r, Long actorId) {
+        if (r.admissionId() != null) {
+            if (r.appointmentId() != null) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "Choose either a visit or an admission, not both");
+            }
+            return createAdmissionInvoice(r, actorId);
+        }
+        if (r.appointmentId() == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "A visit or an admission is required");
+        }
         Appointment a = appointments.findById(r.appointmentId())
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Appointment not found"));
         if (!BILLABLE.contains(a.getStatus())) {
@@ -95,21 +113,7 @@ public class BillingService {
         inv.setAppointmentId(a.getId());
         inv.setCreatedBy(actorId);
 
-        Set<Long> seen = new HashSet<>();
-        if (r.services() != null) {
-            for (ServiceLine line : r.services()) {
-                if (!seen.add(line.serviceChargeId())) {
-                    throw new ApiException(HttpStatus.BAD_REQUEST, "The same service is listed twice");
-                }
-                ServiceCharge c = charges.findById(line.serviceChargeId())
-                        .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND,
-                                "Service " + line.serviceChargeId() + " not found"));
-                if (!c.isActive()) {
-                    throw new ApiException(HttpStatus.BAD_REQUEST, c.getName() + " is not active");
-                }
-                addItem(inv, "SERVICE", c.getName(), line.quantity(), c.getPrice());
-            }
-        }
+        addServiceLines(inv, r.services());
 
         if (Boolean.TRUE.equals(r.includeDispensedMedicines())) {
             for (Prescription p : prescriptions.findByAppointmentIdOrderByIdAsc(a.getId())) {
@@ -139,28 +143,43 @@ public class BillingService {
             }
         }
 
-        if (inv.getItems().isEmpty()) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "Add at least one service or dispensed medicine");
-        }
-        BigDecimal subtotal = inv.getItems().stream().map(InvoiceItem::getLineTotal)
-                .reduce(ZERO, BigDecimal::add);
-        if (subtotal.signum() <= 0) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "The invoice total must be more than zero");
-        }
-        inv.setSubtotal(subtotal);
-        inv.setDiscount(ZERO);
-        inv.setTotal(subtotal);
-        inv.setAmountPaid(ZERO);
-        inv.setStatus(InvoiceStatus.UNPAID);
+        return finishInvoice(inv, actorId);
+    }
 
-        try {
-            invoices.saveAndFlush(inv);
-        } catch (DataIntegrityViolationException e) {
-            throw new ApiException(HttpStatus.CONFLICT, "This appointment has just been invoiced by someone else");
+    private InvoiceDetail createAdmissionInvoice(InvoiceRequest r, Long actorId) {
+        Admission adm = admissionRepo.findById(r.admissionId())
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Admission not found"));
+        if (adm.getStatus() != AdmissionStatus.DISCHARGED) {
+            throw new ApiException(HttpStatus.BAD_REQUEST,
+                    "An admission can be invoiced once the patient has been discharged");
         }
-        audit.log(actorId, "INVOICE_CREATED", "INVOICE", inv.getId(),
-                "invoiceNo=" + inv.getInvoiceNo() + ", total=" + inv.getTotal());
-        return detail(inv);
+        if (invoices.existsByAdmissionIdAndStatusNot(adm.getId(), InvoiceStatus.VOIDED)) {
+            throw new ApiException(HttpStatus.CONFLICT, "This admission already has an active invoice");
+        }
+
+        Invoice inv = new Invoice();
+        inv.setInvoiceNo(String.format("INV-%06d", invoices.nextNumber()));
+        inv.setPatient(adm.getPatient());
+        inv.setAdmissionId(adm.getId());
+        inv.setCreatedBy(actorId);
+
+        // one day for every night spent in a bed, at the rate of the bed occupied that night
+        List<BedStay> stays = adm.getStays();
+        long totalNights = 0;
+        for (BedStay s : stays) {
+            long nights = nightsOf(s);
+            totalNights += nights;
+            if (nights > 0) {
+                addItem(inv, "BED", "Bed: " + s.getWardName() + ", " + s.getBedNo(), (int) nights, s.getDailyRate());
+            }
+        }
+        if (totalNights == 0 && !stays.isEmpty()) {
+            BedStay last = stays.get(stays.size() - 1);
+            addItem(inv, "BED", "Bed: " + last.getWardName() + ", " + last.getBedNo(), 1, last.getDailyRate());
+        }
+
+        addServiceLines(inv, r.services());
+        return finishInvoice(inv, actorId);
     }
 
     @Transactional
@@ -201,6 +220,52 @@ public class BillingService {
     }
 
     // ---------- helpers ----------
+
+    private void addServiceLines(Invoice inv, List<ServiceLine> lines) {
+        if (lines == null) return;
+        Set<Long> seen = new HashSet<>();
+        for (ServiceLine line : lines) {
+            if (!seen.add(line.serviceChargeId())) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "The same service is listed twice");
+            }
+            ServiceCharge c = charges.findById(line.serviceChargeId())
+                    .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND,
+                            "Service " + line.serviceChargeId() + " not found"));
+            if (!c.isActive()) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, c.getName() + " is not active");
+            }
+            addItem(inv, "SERVICE", c.getName(), line.quantity(), c.getPrice());
+        }
+    }
+
+    private InvoiceDetail finishInvoice(Invoice inv, Long actorId) {
+        if (inv.getItems().isEmpty()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Add at least one service, medicine, test or bed charge");
+        }
+        BigDecimal subtotal = inv.getItems().stream().map(InvoiceItem::getLineTotal).reduce(ZERO, BigDecimal::add);
+        if (subtotal.signum() <= 0) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "The invoice total must be more than zero");
+        }
+        inv.setSubtotal(subtotal);
+        inv.setDiscount(ZERO);
+        inv.setTotal(subtotal);
+        inv.setAmountPaid(ZERO);
+        inv.setStatus(InvoiceStatus.UNPAID);
+
+        try {
+            invoices.saveAndFlush(inv);
+        } catch (DataIntegrityViolationException e) {
+            throw new ApiException(HttpStatus.CONFLICT, "This has just been invoiced by someone else");
+        }
+        audit.log(actorId, "INVOICE_CREATED", "INVOICE", inv.getId(),
+                "invoiceNo=" + inv.getInvoiceNo() + ", total=" + inv.getTotal());
+        return detail(inv);
+    }
+
+    private long nightsOf(BedStay s) {
+        if (s.getFromAt() == null || s.getToAt() == null) return 0;
+        return ChronoUnit.DAYS.between(LocalDate.ofInstant(s.getFromAt(), ZONE), LocalDate.ofInstant(s.getToAt(), ZONE));
+    }
 
     private void addItem(Invoice inv, String type, String description, int quantity, BigDecimal unitPrice) {
         InvoiceItem item = new InvoiceItem();

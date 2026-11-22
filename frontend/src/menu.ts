@@ -6,13 +6,14 @@ export interface MenuItem {
   roles: Role[]
 }
 
-const STAFF: Role[] = ['ADMIN', 'RECEPTIONIST', 'DOCTOR', 'NURSE', 'PHARMACIST', 'CASHIER', 'LAB_TECH']
+const STAFF: Role[] = ['ADMIN', 'RECEPTIONIST', 'DOCTOR', 'NURSE', 'PHARMACIST', 'CASHIER', 'LAB_TECH', 'WARD_STAFF']
 
 export const MENU: MenuItem[] = [
   { label: 'Dashboard', path: '/dashboard', roles: STAFF },
   { label: 'Patients', path: '/patients', roles: ['ADMIN', 'RECEPTIONIST', 'DOCTOR', 'NURSE'] },
   { label: 'Appointments', path: '/appointments', roles: ['ADMIN', 'RECEPTIONIST', 'DOCTOR', 'NURSE'] },
   { label: 'Registration requests', path: '/registration-requests', roles: ['ADMIN', 'RECEPTIONIST'] },
+  { label: 'Wards', path: '/wards', roles: ['ADMIN', 'WARD_STAFF', 'DOCTOR', 'NURSE'] },
   { label: 'Laboratory', path: '/laboratory', roles: ['ADMIN', 'LAB_TECH'] },
   { label: 'Pharmacy', path: '/pharmacy', roles: ['ADMIN', 'PHARMACIST'] },
   { label: 'Billing', path: '/billing', roles: ['ADMIN', 'CASHIER'] },

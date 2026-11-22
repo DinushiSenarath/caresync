@@ -38,6 +38,7 @@ public class DemoDataSeeder implements CommandLineRunner {
         seed("pharmacist", "Demo Pharmacist", Role.PHARMACIST);
         seed("cashier", "Demo Cashier", Role.CASHIER);
         seed("lab", "Demo Lab Technician", Role.LAB_TECH);
+        seed("ward", "Demo Ward Clerk", Role.WARD_STAFF);
         log.info("Demo users are ready.");
     }
 
