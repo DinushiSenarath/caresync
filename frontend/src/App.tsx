@@ -8,6 +8,9 @@ import Patients from './pages/Patients'
 import Appointments from './pages/Appointments'
 import Placeholder from './pages/Placeholder'
 import Visit from './pages/Visit'
+import Pharmacy from './pages/Pharmacy'
+import Billing from './pages/Billing'
+import Prices from './pages/Prices'
 
 function RequireAuth() {
   const { user } = useAuth()
@@ -28,12 +31,9 @@ function AppointmentRoute() {
 
 const PLACEHOLDERS: { path: string; title: string }[] = [
   { path: '/registration-requests', title: 'Registration requests' },
-  { path: '/pharmacy', title: 'Pharmacy' },
-  { path: '/billing', title: 'Billing' },
   { path: '/admin/users', title: 'Staff accounts' },
   { path: '/admin/doctors', title: 'Departments and doctors' },
-  { path: '/admin/prices', title: 'Service prices' },
-  { path: '/audit', title: 'Audit log' },
+ { path: '/audit', title: 'Audit log' },
   { path: '/portal', title: 'Welcome' },
   { path: '/portal/appointments', title: 'My appointments' },
   { path: '/portal/prescriptions', title: 'My prescriptions' },
@@ -53,6 +53,13 @@ export default function App() {
             <Route path="/patients" element={<Patients />} />
             <Route path="/appointments" element={<Appointments />} />
             <Route path="/appointments/:id" element={<AppointmentRoute />} />
+            <Route path="/pharmacy" element={<Pharmacy />} />
+            <Route path="/pharmacy/queue" element={<Pharmacy />} />
+            <Route path="/pharmacy/alerts" element={<Pharmacy />} />
+            <Route path="/billing" element={<Billing />} />
+            <Route path="/billing/adjustments" element={<Billing />} />
+            <Route path="/billing/invoices/:id" element={<Billing />} />
+            <Route path="/admin/prices" element={<Prices />} />
             {PLACEHOLDERS.map((p) => (
               <Route key={p.path} path={p.path} element={<Placeholder title={p.title} />} />
             ))}

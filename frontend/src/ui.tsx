@@ -150,3 +150,43 @@ export function StatusBadge({ status }: { status: AppointmentStatus }) {
     </span>
   )
 }
+
+const lkr = new Intl.NumberFormat('en-LK', { style: 'currency', currency: 'LKR' })
+
+export function fmtMoney(n: number | null | undefined): string {
+  return n == null ? '' : lkr.format(n)
+}
+
+export function fmtDateTime(s: string | null | undefined): string {
+  return s ? new Date(s).toLocaleString() : ''
+}
+
+export function detailMsg(e: unknown): string {
+  if (e instanceof ApiError && e.fieldErrors) {
+    const parts = Object.values(e.fieldErrors)
+    if (parts.length > 0) return `${e.message}: ${parts.join('; ')}`
+  }
+  return errMsg(e)
+}
+
+export function Tabs<T extends string>({
+  tabs, value, onChange,
+}: { tabs: { key: T; label: string }[]; value: T; onChange: (k: T) => void }) {
+  return (
+    <div className="mb-4 flex flex-wrap gap-1 border-b">
+      {tabs.map((t) => (
+        <button
+          key={t.key}
+          onClick={() => onChange(t.key)}
+          className={`-mb-px border-b-2 px-4 py-2 text-sm ${
+            value === t.key
+              ? 'border-teal-700 font-medium text-teal-800'
+              : 'border-transparent text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          {t.label}
+        </button>
+      ))}
+    </div>
+  )
+}
