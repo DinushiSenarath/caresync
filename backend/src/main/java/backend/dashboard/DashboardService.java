@@ -33,6 +33,8 @@ import backend.ward.AdmissionRepository;
 import backend.ward.AdmissionStatus;
 import backend.ward.BedRepository;
 import backend.ward.BedStayRepository;
+import backend.hr.LeaveRequestRepository;
+import backend.hr.LeaveStatus;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -64,6 +66,7 @@ public class DashboardService {
     private final AdmissionRepository admissions;
     private final BedRepository beds;
     private final BedStayRepository bedStays;
+    private final LeaveRequestRepository leaveRequests;
 
     @Transactional(readOnly = true)
     public DashboardResponse summary(Long userId, Role role) {
@@ -82,6 +85,7 @@ public class DashboardService {
                 c.put("pendingAdjustments", adjustments.countByStatus(AdjustmentStatus.PENDING));
                 c.put("labRequestsPending", labRequests.countByStatusIn(List.of(LabStatus.REQUESTED, LabStatus.COLLECTED)));
                 c.put("inpatientsNow", admissions.countByStatus(AdmissionStatus.ADMITTED));
+                c.put("pendingLeaveRequests", leaveRequests.countByStatus(LeaveStatus.PENDING));
                 c.put("freeBeds", Math.max(0L, beds.countUsable() - bedStays.countByToAtIsNull()));
                 c.put("revenueToday", collectedToday(today));
                 addPharmacyAlerts(c);

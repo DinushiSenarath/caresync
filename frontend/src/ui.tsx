@@ -190,3 +190,25 @@ export function Tabs<T extends string>({
     </div>
   )
 }
+
+export function fmtClock(s: string | null | undefined): string {
+  return s ? new Date(s).toLocaleTimeString('en-GB', { timeZone: 'Asia/Colombo', hour: '2-digit', minute: '2-digit' }) : ''
+}
+
+/** Downloads rows as a CSV file. Text cells that start with = + - or @ are prefixed so spreadsheets do not run them as formulas. */
+export function downloadCsv(filename: string, rows: (string | number | null | undefined)[][]) {
+  const cell = (v: string | number | null | undefined) => {
+    let s = v == null ? '' : String(v)
+    if (typeof v === 'string' && /^[=+\-@\t\r]/.test(s)) s = `'${s}`
+    return `"${s.replace(/"/g, '""')}"`
+  }
+  const text = '\uFEFF' + rows.map((r) => r.map(cell).join(',')).join('\r\n')
+  const url = URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8' }))
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}

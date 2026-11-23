@@ -14,6 +14,8 @@ export const MENU: MenuItem[] = [
   { label: 'Appointments', path: '/appointments', roles: ['ADMIN', 'RECEPTIONIST', 'DOCTOR', 'NURSE'] },
   { label: 'Registration requests', path: '/registration-requests', roles: ['ADMIN', 'RECEPTIONIST'] },
   { label: 'Wards', path: '/wards', roles: ['ADMIN', 'WARD_STAFF', 'DOCTOR', 'NURSE'] },
+  { label: 'Staff management', path: '/hr', roles: ['ADMIN'] },
+  { label: 'My attendance and leave', path: '/my-work', roles: STAFF },
   { label: 'Laboratory', path: '/laboratory', roles: ['ADMIN', 'LAB_TECH'] },
   { label: 'Pharmacy', path: '/pharmacy', roles: ['ADMIN', 'PHARMACIST'] },
   { label: 'Billing', path: '/billing', roles: ['ADMIN', 'CASHIER'] },
