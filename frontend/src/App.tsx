@@ -20,6 +20,7 @@ import Registrations from './pages/Registrations'
 import AuditLog from './pages/AuditLog'
 import ChangePassword from './pages/ChangePassword'
 import { Activate, Register, ResetPassword } from './pages/Public'
+import { PortalAppointments, PortalBills, PortalHome, PortalLab, PortalPrescriptions, PortalProfile } from './pages/Portal'
 import Placeholder from './pages/Placeholder'
 
 function RequireAuth() {
@@ -38,15 +39,6 @@ function AppointmentRoute() {
   const { user } = useAuth()
   return user && (user.role === 'DOCTOR' || user.role === 'NURSE') ? <Visit /> : <Appointments />
 }
-
-const PLACEHOLDERS: { path: string; title: string }[] = [
-  { path: '/portal', title: 'Welcome' },
-  { path: '/portal/appointments', title: 'My appointments' },
-  { path: '/portal/prescriptions', title: 'My prescriptions' },
-  { path: '/portal/lab', title: 'My lab results' },
-  { path: '/portal/bills', title: 'My bills' },
-  { path: '/portal/profile', title: 'My details' },
-]
 
 export default function App() {
   return (
@@ -79,9 +71,12 @@ export default function App() {
             <Route path="/admin/prices" element={<Prices />} />
             <Route path="/audit" element={<AuditLog />} />
             <Route path="/account" element={<ChangePassword />} />
-            {PLACEHOLDERS.map((p) => (
-              <Route key={p.path} path={p.path} element={<Placeholder title={p.title} />} />
-            ))}
+            <Route path="/portal" element={<PortalHome />} />
+            <Route path="/portal/appointments" element={<PortalAppointments />} />
+            <Route path="/portal/prescriptions" element={<PortalPrescriptions />} />
+            <Route path="/portal/lab" element={<PortalLab />} />
+            <Route path="/portal/bills" element={<PortalBills />} />
+            <Route path="/portal/profile" element={<PortalProfile />} />
             <Route path="*" element={<Placeholder title="Page not found" />} />
           </Route>
         </Routes>
