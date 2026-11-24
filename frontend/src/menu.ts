@@ -29,6 +29,7 @@ export const MENU: MenuItem[] = [
   { label: 'My lab results', path: '/portal/lab', roles: ['PATIENT'] },
   { label: 'My bills', path: '/portal/bills', roles: ['PATIENT'] },
   { label: 'My details', path: '/portal/profile', roles: ['PATIENT'] },
+  { label: 'Change password', path: '/account', roles: ['ADMIN', 'RECEPTIONIST', 'DOCTOR', 'NURSE', 'PHARMACIST', 'CASHIER', 'LAB_TECH', 'WARD_STAFF', 'PATIENT'] },
 ]
 
 export const ROLE_LABEL: Record<Role, string> = {

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { ApiError } from '../api'
 import { useAuth } from '../auth'
 import { homePath } from '../menu'
@@ -73,6 +73,13 @@ export default function Login() {
             The first sign-in after a quiet period can take up to a minute while the server wakes up.
           </p>
         )}
+
+        <div className="mt-5 space-y-1 border-t pt-4 text-sm">
+          <p className="font-medium">Patients</p>
+          <p><Link to="/register" className="text-teal-700 hover:underline">Register online</Link></p>
+          <p><Link to="/activate" className="text-teal-700 hover:underline">I have an activation code</Link></p>
+          <p><Link to="/reset-password" className="text-teal-700 hover:underline">I forgot my password</Link></p>
+        </div>
       </form>
     </div>
   )

@@ -6,7 +6,6 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Patients from './pages/Patients'
 import Appointments from './pages/Appointments'
-import Placeholder from './pages/Placeholder'
 import Visit from './pages/Visit'
 import Pharmacy from './pages/Pharmacy'
 import Billing from './pages/Billing'
@@ -15,6 +14,13 @@ import Laboratory from './pages/Laboratory'
 import Wards from './pages/Wards'
 import Hr from './pages/Hr'
 import MyWork from './pages/MyWork'
+import Users from './pages/Users'
+import DoctorsAdmin from './pages/DoctorsAdmin'
+import Registrations from './pages/Registrations'
+import AuditLog from './pages/AuditLog'
+import ChangePassword from './pages/ChangePassword'
+import { Activate, Register, ResetPassword } from './pages/Public'
+import Placeholder from './pages/Placeholder'
 
 function RequireAuth() {
   const { user } = useAuth()
@@ -34,16 +40,12 @@ function AppointmentRoute() {
 }
 
 const PLACEHOLDERS: { path: string; title: string }[] = [
-  { path: '/registration-requests', title: 'Registration requests' },
-  { path: '/admin/users', title: 'Staff accounts' },
-  { path: '/admin/doctors', title: 'Departments and doctors' },
-  { path: '/audit', title: 'Audit log' },
   { path: '/portal', title: 'Welcome' },
   { path: '/portal/appointments', title: 'My appointments' },
   { path: '/portal/prescriptions', title: 'My prescriptions' },
+  { path: '/portal/lab', title: 'My lab results' },
   { path: '/portal/bills', title: 'My bills' },
   { path: '/portal/profile', title: 'My details' },
-  { path: '/portal/lab', title: 'My lab results' },
 ]
 
 export default function App() {
@@ -52,24 +54,31 @@ export default function App() {
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/activate" element={<Activate />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route element={<RequireAuth />}>
             <Route path="/" element={<Home />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/patients" element={<Patients />} />
             <Route path="/appointments" element={<Appointments />} />
             <Route path="/appointments/:id" element={<AppointmentRoute />} />
+            <Route path="/registration-requests" element={<Registrations />} />
             <Route path="/pharmacy" element={<Pharmacy />} />
             <Route path="/pharmacy/queue" element={<Pharmacy />} />
             <Route path="/pharmacy/alerts" element={<Pharmacy />} />
             <Route path="/billing" element={<Billing />} />
             <Route path="/billing/adjustments" element={<Billing />} />
             <Route path="/billing/invoices/:id" element={<Billing />} />
-            <Route path="/admin/prices" element={<Prices />} />
             <Route path="/laboratory" element={<Laboratory />} />
             <Route path="/wards" element={<Wards />} />
             <Route path="/hr" element={<Hr />} />
             <Route path="/my-work" element={<MyWork />} />
-
+            <Route path="/admin/users" element={<Users />} />
+            <Route path="/admin/doctors" element={<DoctorsAdmin />} />
+            <Route path="/admin/prices" element={<Prices />} />
+            <Route path="/audit" element={<AuditLog />} />
+            <Route path="/account" element={<ChangePassword />} />
             {PLACEHOLDERS.map((p) => (
               <Route key={p.path} path={p.path} element={<Placeholder title={p.title} />} />
             ))}
