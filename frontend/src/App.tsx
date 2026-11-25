@@ -22,6 +22,7 @@ import ChangePassword from './pages/ChangePassword'
 import { Activate, Register, ResetPassword } from './pages/Public'
 import { PortalAppointments, PortalBills, PortalHome, PortalLab, PortalPrescriptions, PortalProfile } from './pages/Portal'
 import Placeholder from './pages/Placeholder'
+import Reports from './pages/Reports'
 
 function RequireAuth() {
   const { user } = useAuth()
@@ -70,6 +71,7 @@ export default function App() {
             <Route path="/admin/doctors" element={<DoctorsAdmin />} />
             <Route path="/admin/prices" element={<Prices />} />
             <Route path="/audit" element={<AuditLog />} />
+            <Route path="/reports" element={<Reports />} />
             <Route path="/account" element={<ChangePassword />} />
             <Route path="/portal" element={<PortalHome />} />
             <Route path="/portal/appointments" element={<PortalAppointments />} />

@@ -19,6 +19,7 @@ export const MENU: MenuItem[] = [
   { label: 'Laboratory', path: '/laboratory', roles: ['ADMIN', 'LAB_TECH'] },
   { label: 'Pharmacy', path: '/pharmacy', roles: ['ADMIN', 'PHARMACIST'] },
   { label: 'Billing', path: '/billing', roles: ['ADMIN', 'CASHIER'] },
+  { label: 'Reports', path: '/reports', roles: ['ADMIN', 'RECEPTIONIST', 'CASHIER', 'PHARMACIST', 'LAB_TECH'] },
   { label: 'Staff accounts', path: '/admin/users', roles: ['ADMIN'] },
   { label: 'Departments and doctors', path: '/admin/doctors', roles: ['ADMIN'] },
   { label: 'Service prices', path: '/admin/prices', roles: ['ADMIN'] },
